@@ -12,6 +12,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
+import androidx.biometric.BiometricManager;
 
 import java.util.concurrent.Executor;
 
@@ -87,22 +88,38 @@ public class BiometricActivity extends AppCompatActivity {
                 .getInitializedCipherForDecryption(SECRET_KEY, initializationVector, this);
         mBiometricPrompt.authenticate(createPromptInfo(), new BiometricPrompt.CryptoObject(cipher));
     }
+	
+	private BiometricPrompt.PromptInfo createPromptInfo() {
+		BiometricPrompt.PromptInfo.Builder promptInfoBuilder = new BiometricPrompt.PromptInfo.Builder()
+				.setTitle(mPromptInfo.getTitle())
+				.setSubtitle(mPromptInfo.getSubtitle())
+				.setConfirmationRequired(mPromptInfo.getConfirmationRequired())
+				.setDescription(mPromptInfo.getDescription());
 
-    private BiometricPrompt.PromptInfo createPromptInfo() {
-        BiometricPrompt.PromptInfo.Builder promptInfoBuilder = new BiometricPrompt.PromptInfo.Builder()
-                .setTitle(mPromptInfo.getTitle())
-                .setSubtitle(mPromptInfo.getSubtitle())
-                .setConfirmationRequired(mPromptInfo.getConfirmationRequired())
-                .setDescription(mPromptInfo.getDescription());
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+			// Android 11+ (API 30+) supports allowedAuthenticators
+			int authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG
+					| BiometricManager.Authenticators.BIOMETRIC_WEAK;
 
-        if (mPromptInfo.isDeviceCredentialAllowed()
-                && mPromptInfo.getType() == BiometricActivityType.JUST_AUTHENTICATE) {
-            promptInfoBuilder.setDeviceCredentialAllowed(true);
-        } else {
-            promptInfoBuilder.setNegativeButtonText(mPromptInfo.getCancelButtonTitle());
-        }
-        return promptInfoBuilder.build();
-    }
+			// Allow device credential if it was requested and allowed in promptInfo
+			if (mPromptInfo.isDeviceCredentialAllowed() &&
+				mPromptInfo.getType() == BiometricActivityType.JUST_AUTHENTICATE) {
+				authenticators |= BiometricManager.Authenticators.DEVICE_CREDENTIAL;
+			}
+
+			promptInfoBuilder.setAllowedAuthenticators(authenticators);
+		} else {
+			// Older API: fallback to legacy method
+			if (mPromptInfo.isDeviceCredentialAllowed()
+					&& mPromptInfo.getType() == BiometricActivityType.JUST_AUTHENTICATE) {
+				promptInfoBuilder.setDeviceCredentialAllowed(true);
+			} else {
+				promptInfoBuilder.setNegativeButtonText(mPromptInfo.getCancelButtonTitle());
+			}
+		}
+
+		return promptInfoBuilder.build();
+	}
 
     private BiometricPrompt.AuthenticationCallback mAuthenticationCallback =
             new BiometricPrompt.AuthenticationCallback() {
