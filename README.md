@@ -1,4 +1,4 @@
-# OutSystems Finger Print cordova plugin
+# Biometric cordova plugin
 
 This repository is a forked and customized version of the [original OutSystems cordova-plugin-fingerprint](https://github.com/OutSystems/cordova-plugin-fingerprint).
 
